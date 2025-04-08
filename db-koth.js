@@ -44,7 +44,7 @@ export default class DBKoth extends BasePlugin{
         },
       database:
         {
-          required: false,
+          required: true,
           description: 'database to use',
           default: false,
           connector: 'sequelize'
