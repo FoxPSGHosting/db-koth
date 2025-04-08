@@ -1,4 +1,4 @@
-Open Software License v. 3.0 (OSL-3.0)
+Open Software License v. 3.0 (OSL-3.0) https://spdx.org/licenses/OSL-3.0.html
 
 This Open Software License (the "License") applies to any original work of authorship (the "Original Work") whose owner (the "Licensor") has placed the following licensing notice adjacent to the copyright notice for the Original Work:
 
