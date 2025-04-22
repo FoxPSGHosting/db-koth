@@ -112,7 +112,12 @@ export default class DBKoth extends BasePlugin {
       const processedSteamIDs = new Set();
 
       for (const playerfile of files) {
-        if (!playerfile.endsWith('.json')) continue;
+        if (!playerfile.endsWith('.json') || playerfile === 'ServerSettings.json' || playerfile.toLowerCase() === 'serversettings.json') {
+          if (playerfile === 'ServerSettings.json' || playerfile.toLowerCase() === 'serversettings.json') {
+            this.verbose(1, `[${playerfile}] Skipped ServerSettings.json`);
+          }
+          continue;
+        }
         const fullfilepath = path.join(this.kothpath, playerfile);
         const playerfileid = playerfile.split('.json')[0];
         processedSteamIDs.add(playerfileid);
@@ -155,6 +160,11 @@ export default class DBKoth extends BasePlugin {
       });
       for (const dbPlayer of dbPlayers) {
         const steamID = dbPlayer.player_id;
+        // Skip invalid player_id entries (non-SteamID or ServerSettings)
+        if (!/^\d{17}$/.test(steamID) || steamID.toLowerCase() === 'serversettings') {
+          this.verbose(1, `[${steamID}] Skipped invalid player_id in database`);
+          continue;
+        }
         if (!processedSteamIDs.has(steamID)) {
           const playerfilename = path.join(this.kothpath, `${steamID}.json`);
           const playerdata = typeof dbPlayer.playerdata === 'string' ? JSON.parse(dbPlayer.playerdata) : dbPlayer.playerdata;
