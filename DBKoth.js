@@ -1,3 +1,23 @@
+/*
+Copyright (c) 2025 Licensed under the Open Software License version 3.0
+
+OSL-3.0 <https://spdx.org/licenses/OSL-3.0.html>
+
+Attribution Notice:
+Skillet (discord: steelskillet)
+The Unnamed (https://theunnamedcorp.com/)
+*/
+
+/*
+OSL basic permissions:
+distribution or modification are allowed for any purpose provided that you:
+1. license the work under this same license (section 1(c))
+2. include a copy of the above copyright notice and Attribution Notice in ANY derivatives or copies (section 6)
+ a. you may exclude this 'OSL basic permissions' part.
+3. provide access to the source code for private copies or derivatives if it has public network access (section 5)
+4. provide reasonable notice under 'Attribution Notice' that you have modified this work (section 6)
+*/
+
 import BasePlugin from './base-plugin.js';
 import { DataTypes } from 'sequelize';
 import { fileURLToPath } from 'url';
@@ -76,7 +96,13 @@ export default class DBKoth extends BasePlugin {
       }
     });
 
-    await this.models.PlayerData.sync({ alter: true });
+    try {
+      await this.models.PlayerData.sync();
+      this.verbose(1, 'DBKoth: PlayerData table initialized');
+    } catch (err) {
+      this.verbose(1, `DBKoth: Failed to sync PlayerData table: ${err.message}`);
+      throw err;
+    }
   }
 
   async syncKothFiles() {
@@ -96,21 +122,29 @@ export default class DBKoth extends BasePlugin {
         });
         const lastfileedit = (await stat(fullfilepath)).mtime;
         if (!dbdata || (lastfileedit > dbdata.lastsave)) {
-          const playerdata = await readFile(fullfilepath, { encoding: 'utf8' });
+          const playerdataRaw = await readFile(fullfilepath, { encoding: 'utf8' });
+          let playerdata;
+          try {
+            playerdata = JSON.parse(playerdataRaw);
+          } catch (err) {
+            this.verbose(1, `[${playerfileid}] Invalid JSON in file, skipping: ${err.message}`);
+            continue;
+          }
           await this.models.PlayerData.upsert(
             {
               player_id: playerids.id,
               lastsave: new Date(),
               serversave: this.server.id,
-              playerdata: JSON.parse(playerdata)
+              playerdata: playerdata
             },
             {
               conflictFields: ['player_id']
             }
           );
           this.verbose(1, `[${playerfileid}] playerfile is newer than db, saved to db`);
-        } else {
-          await writeFile(fullfilepath, JSON.stringify(dbdata.playerdata));
+        } else if (dbdata) {
+          const playerdata = typeof dbdata.playerdata === 'string' ? JSON.parse(dbdata.playerdata) : dbdata.playerdata;
+          await writeFile(fullfilepath, JSON.stringify(playerdata, null, 2));
           this.verbose(1, `[${playerfileid}] db is newer than playerfile, writing to playerfile`);
         }
       }
@@ -123,7 +157,8 @@ export default class DBKoth extends BasePlugin {
         const steamID = dbPlayer.player_id;
         if (!processedSteamIDs.has(steamID)) {
           const playerfilename = path.join(this.kothpath, `${steamID}.json`);
-          await writeFile(playerfilename, JSON.stringify(dbPlayer.playerdata));
+          const playerdata = typeof dbPlayer.playerdata === 'string' ? JSON.parse(dbPlayer.playerdata) : dbPlayer.playerdata;
+          await writeFile(playerfilename, JSON.stringify(playerdata, null, 2));
           this.verbose(1, `[${steamID}] no JSON file, created from db`);
         }
       }
@@ -197,7 +232,8 @@ export default class DBKoth extends BasePlugin {
     });
     if (!playerdb) return;
     this.verbose(1, `found playerdata in DB and read into memory`);
-    fs.writeFileSync(playerfilename, JSON.stringify(playerdb.playerdata));
+    const playerdata = typeof playerdb.playerdata === 'string' ? JSON.parse(playerdb.playerdata) : playerdb.playerdata;
+    fs.writeFileSync(playerfilename, JSON.stringify(playerdata, null, 2));
     this.verbose(1, `saved file`);
   }
 
@@ -206,7 +242,14 @@ export default class DBKoth extends BasePlugin {
     const playerfilename = this.getplayerfilename(info.player);
     this.verbose(1, `attempting to save file ${playerfilename} to db`);
     if (!fs.existsSync(playerfilename)) return;
-    const playerdata = JSON.parse(fs.readFileSync(playerfilename));
+    const playerdataRaw = fs.readFileSync(playerfilename, 'utf8');
+    let playerdata;
+    try {
+      playerdata = JSON.parse(playerdataRaw);
+    } catch (err) {
+      this.verbose(1, `Invalid JSON in file ${playerfilename}, skipping: ${err.message}`);
+      return;
+    }
     this.verbose(1, `read player data into memory`);
 
     const playerids = await this.getplayerids(info.player);
