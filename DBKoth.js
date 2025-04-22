@@ -1,23 +1,3 @@
-/*
-Copyright (c) 2025 Licensed under the Open Software License version 3.0
-
-OSL-3.0 <https://spdx.org/licenses/OSL-3.0.html>
-
-Attribution Notice:
-Skillet (discord: steelskillet)
-The Unnamed (https://theunnamedcorp.com/)
-*/
-
-/*
-OSL basic permissions:
-distribution or modification are allowed for any purpose provided that you:
-1. license the work under this same license (section 1(c))
-2. include a copy of the above copyright notice and Attribution Notice in ANY derivatives or copies (section 6)
- a. you may exclude this 'OSL basic permissions' part.
-3. provide access to the source code for private copies or derivatives if it has public network access (section 5)
-4. provide reasonable notice under 'Attribution Notice' that you have modified this work (section 6)
-*/
-
 import BasePlugin from './base-plugin.js';
 import { DataTypes } from 'sequelize';
 import { fileURLToPath } from 'url';
@@ -74,7 +54,10 @@ export default class DBKoth extends BasePlugin {
   }
 
   async prepareToMount() {
-    const playeridmeta = { type: DataTypes.STRING };
+    const playeridmeta = { 
+      type: DataTypes.STRING,
+      unique: true
+    };
     await this.createModel('PlayerData', {
       id: {
         type: DataTypes.INTEGER,
@@ -93,7 +76,7 @@ export default class DBKoth extends BasePlugin {
       }
     });
 
-    await this.models.PlayerData.sync();
+    await this.models.PlayerData.sync({ alter: true });
   }
 
   async syncKothFiles() {
