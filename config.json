@@ -1,0 +1,9 @@
+    {
+      "plugin": "DBKoth",
+      "enabled": true,
+      "kothFolderPath": "./SquadGame/Saved/KOTH/",
+      "database": "mysql",
+      "syncInterval": 60,
+      "syncEnabled": true,
+      "websocketPort": "10210"
+    }
