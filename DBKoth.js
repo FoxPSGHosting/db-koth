@@ -46,6 +46,16 @@ export default class DBKoth extends BasePlugin {
         description: 'database to use',
         default: false,
         connector: 'sequelize'
+      },
+      syncInterval: {
+        required: false,
+        description: 'Interval for periodic sync in seconds.',
+        default: 60
+      },
+      syncEnabled: {
+        required: false,
+        description: 'Whether periodic sync is enabled.',
+        default: true
       }
     }
   }
@@ -159,8 +169,14 @@ export default class DBKoth extends BasePlugin {
 
     await this.syncKothFiles(); // Initial sync
 
-    // Start periodic sync every 60 seconds
-    this.syncInterval = setInterval(() => this.syncKothFiles(), 60000);
+    // Start periodic sync if enabled
+    if (this.options.syncEnabled) {
+      const intervalMs = this.options.syncInterval * 1000; // Convert seconds to milliseconds
+      this.syncInterval = setInterval(() => this.syncKothFiles(), intervalMs);
+      this.verbose(1, `DBKoth: Started periodic sync every ${this.options.syncInterval} seconds`);
+    } else {
+      this.verbose(1, 'DBKoth: Periodic sync disabled');
+    }
 
     this.server.on('PLAYER_CONNECTED', this.onPlayerConnected);
     this.server.on('PLAYER_DISCONNECTED', this.onPlayerDisconnected);
