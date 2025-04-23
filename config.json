@@ -1,5 +1,5 @@
     {
-      "plugin": "DBKoth",
+      "plugin": "OfficialKothDB",
       "enabled": true,
       "kothFolderPath": "./SquadGame/Saved/KOTH/",
       "database": "sqlite",
