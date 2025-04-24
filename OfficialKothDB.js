@@ -47,11 +47,6 @@ export default class OfficialKothDB extends BasePlugin {
         default: false,
         connector: 'sequelize'
       },
-      syncInterval: {
-        required: false,
-        description: 'Interval for periodic sync in seconds.',
-        default: 60
-      },
       syncEnabled: {
         required: false,
         description: 'Whether periodic sync is enabled.',
@@ -212,9 +207,9 @@ export default class OfficialKothDB extends BasePlugin {
 
     // Start periodic sync if enabled
     if (this.options.syncEnabled) {
-      const intervalMs = this.options.syncInterval * 1000; // Convert seconds to milliseconds
+      const intervalMs = 90000; // Fixed 90 seconds (90000 milliseconds)
       this.syncInterval = setInterval(() => this.syncKothFiles(), intervalMs);
-      this.verbose(1, `OfficialKothDB: Started periodic sync every ${this.options.syncInterval} seconds`);
+      this.verbose(1, `OfficialKothDB: Started periodic sync every 90 seconds`);
     } else {
       this.verbose(1, 'OfficialKothDB: Periodic sync disabled');
     }
