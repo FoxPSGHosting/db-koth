@@ -3,7 +3,5 @@
       "enabled": true,
       "kothFolderPath": "./SquadGame/Saved/KOTH/",
       "database": "sqlite",
-      "syncInterval": 60,
-      "syncEnabled": true,
       "websocketPort": "10210"
     }
