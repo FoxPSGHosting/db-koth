@@ -2,6 +2,6 @@
       "plugin": "OfficialKothDB",
       "enabled": true,
       "kothFolderPath": "./SquadGame/Saved/KOTH/",
-      "database": "sqlite",
-      "websocketPort": "10210"
+      "database": "mysql",
+      "websocketPort": ""
     }
