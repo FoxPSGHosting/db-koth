@@ -23,11 +23,11 @@ import { DataTypes } from 'sequelize';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
-import { readdir, stat, readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 
 export default class OfficialKothDB extends BasePlugin {
   static get description(){
-    return "Saves KOTH data to db and loads it to sync player data across servers, pushing ServerSettings.json from database";
+    return "Pushes ServerSettings.json from database every 90 seconds and syncs player data on join/leave";
   }
 
   static get defaultEnabled(){
@@ -49,7 +49,7 @@ export default class OfficialKothDB extends BasePlugin {
       },
       syncEnabled: {
         required: false,
-        description: 'Whether periodic sync is enabled.',
+        description: 'Whether periodic sync of ServerSettings.json is enabled.',
         default: true
       }
     }
@@ -113,72 +113,6 @@ export default class OfficialKothDB extends BasePlugin {
         this.verbose(1, 'OfficialKothDB: Pushed ServerSettings.json from database');
       } else {
         this.verbose(1, 'OfficialKothDB: No ServerSettings record found in database, skipping push');
-      }
-
-      // Sync player files to database
-      const files = await readdir(this.kothpath);
-      const processedSteamIDs = new Set();
-
-      for (const playerfile of files) {
-        if (!playerfile.endsWith('.json') || playerfile === 'ServerSettings.json' || playerfile.toLowerCase() === 'serversettings.json') {
-          if (playerfile === 'ServerSettings.json' || playerfile.toLowerCase() === 'serversettings.json') {
-            this.verbose(1, `[${playerfile}] Skipped ServerSettings.json`);
-          }
-          continue;
-        }
-        const fullfilepath = path.join(this.kothpath, playerfile);
-        const playerfileid = playerfile.split('.json')[0];
-        processedSteamIDs.add(playerfileid);
-        const playerids = await this.getplayerids({ steamID: playerfileid });
-        const dbdata = await this.models.PlayerData.findOne({
-          where: { player_id: playerids.id }
-        });
-        const lastfileedit = (await stat(fullfilepath)).mtime;
-        if (!dbdata || (lastfileedit > dbdata.lastsave)) {
-          const playerdataRaw = await readFile(fullfilepath, { encoding: 'utf8' });
-          let playerdata;
-          try {
-            playerdata = JSON.parse(playerdataRaw);
-          } catch (err) {
-            this.verbose(1, `[${playerfileid}] Invalid JSON in file, skipping: ${err.message}`);
-            continue;
-          }
-          await this.models.PlayerData.upsert(
-            {
-              player_id: playerids.id,
-              lastsave: new Date(),
-              serversave: this.server.id,
-              playerdata: playerdata
-            },
-            {
-              conflictFields: ['player_id']
-            }
-          );
-          this.verbose(1, `[${playerfileid}] playerfile is newer than db, saved to db`);
-        } else if (dbdata) {
-          const playerdata = typeof dbdata.playerdata === 'string' ? JSON.parse(dbdata.playerdata) : dbdata.playerdata;
-          await writeFile(fullfilepath, JSON.stringify(playerdata, null, 2));
-          this.verbose(1, `[${playerfileid}] db is newer than playerfile, writing to playerfile`);
-        }
-      }
-
-      // Check database for player data without JSON files (only valid SteamIDs)
-      const dbPlayers = await this.models.PlayerData.findAll({
-        attributes: ['player_id', 'lastsave', 'playerdata']
-      });
-      for (const dbPlayer of dbPlayers) {
-        const steamID = dbPlayer.player_id;
-        // Skip invalid player_id entries (non-SteamID or ServerSettings)
-        if (!/^\d{17}$/.test(steamID) || steamID.toLowerCase() === 'serversettings') {
-          this.verbose(1, `[${steamID}] Skipped invalid player_id in database`);
-          continue;
-        }
-        if (!processedSteamIDs.has(steamID)) {
-          const playerfilename = path.join(this.kothpath, `${steamID}.json`);
-          const playerdata = typeof dbPlayer.playerdata === 'string' ? JSON.parse(dbPlayer.playerdata) : dbPlayer.playerdata;
-          await writeFile(playerfilename, JSON.stringify(playerdata, null, 2));
-          this.verbose(1, `[${steamID}] no JSON file, created from db`);
-        }
       }
 
       this.verbose(1, 'OfficialKothDB: Periodic sync completed');
