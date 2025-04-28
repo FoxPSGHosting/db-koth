@@ -14,7 +14,6 @@
       "plugin": "OfficialKothDB",
       "enabled": true,
       "kothFolderPath": "./SquadGame/Saved/KOTH/",
-      "prefixesFilePath": "./SquadGame/Save/SquadAdminTools/PlayerPrefixes.cfg",
       "database": "mysql",
       "websocketPort": ""
     }
