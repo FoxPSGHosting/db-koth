@@ -1,7 +1,22 @@
+{
+  "connectors": {
+    "mysql": {
+      "host": "localhost",
+      "port": 3306,
+      "username": "squadjs",
+      "password": "your_password",
+      "database": "squadjs",
+      "dialect": "mysql"
+    }
+  },
+  "plugins": [
     {
       "plugin": "OfficialKothDB",
       "enabled": true,
       "kothFolderPath": "./SquadGame/Saved/KOTH/",
+      "prefixesFilePath": "./SquadGame/Save/SquadAdminTools/PlayerPrefixes.cfg",
       "database": "mysql",
       "websocketPort": ""
     }
+  ]
+}
