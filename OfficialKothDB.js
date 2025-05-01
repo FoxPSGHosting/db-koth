@@ -100,6 +100,18 @@ export default class OfficialKothDB extends BasePlugin {
     }
   }
 
+  async readPlayerList() {
+    const playerListPath = path.join(this.kothpath, 'PlayerList.json');
+    try {
+      const data = await readFile(playerListPath, 'utf8');
+      const jsonData = JSON.parse(data);
+      return jsonData.steamIDs || [];
+    } catch (err) {
+      this.verbose(1, `OfficialKothDB: Error reading PlayerList.json: ${err.message}`);
+      return [];
+    }
+  }
+
   async syncKothFiles() {
     try {
       // Push ServerSettings.json from database
@@ -113,6 +125,33 @@ export default class OfficialKothDB extends BasePlugin {
         this.verbose(1, 'OfficialKothDB: Pushed ServerSettings.json from database');
       } else {
         this.verbose(1, 'OfficialKothDB: No ServerSettings record found in database, skipping push');
+      }
+
+      // Sync player files for currently connected players
+      const connectedSteamIDs = await this.readPlayerList();
+      for (const steamID of connectedSteamIDs) {
+        const playerFilePath = path.join(this.kothpath, `${steamID}.json`);
+        if (fs.existsSync(playerFilePath)) {
+          try {
+            const playerDataRaw = await readFile(playerFilePath, 'utf8');
+            const playerData = JSON.parse(playerDataRaw);
+            
+            await this.models.PlayerData.upsert(
+              {
+                player_id: steamID,
+                lastsave: new Date(),
+                serversave: this.server.id,
+                playerdata: playerData
+              },
+              {
+                conflictFields: ['player_id']
+              }
+            );
+            this.verbose(1, `OfficialKothDB: Synced player data for ${steamID} to DB`);
+          } catch (err) {
+            this.verbose(1, `OfficialKothDB: Error syncing player ${steamID}: ${err.message}`);
+          }
+        }
       }
 
       this.verbose(1, 'OfficialKothDB: Periodic sync completed');
