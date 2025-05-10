@@ -8,16 +8,6 @@ Skillet (discord: steelskillet)
 The Unnamed (https://theunnamedcorp.com/)
 */
 
-/*
-OSL basic permissions:
-distribution or modification are allowed for any purpose provided that you:
-1. license the work under this same license (section 1(c))
-2. include a copy of the above copyright notice and Attribution Notice in ANY derivatives or copies (section 6)
- a. you may exclude this 'OSL basic permissions' part.
-3. provide access to the source code for private copies or derivatives if it has public network access (section 5)
-4. provide reasonable notice under 'Attribution Notice' that you have modified this work (section 6)
-*/
-
 import BasePlugin from './base-plugin.js';
 import { DataTypes } from 'sequelize';
 import { fileURLToPath } from 'url';
@@ -27,7 +17,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 
 export default class OfficialKothDB extends BasePlugin {
   static get description() {
-    return "Pushes ServerSettings.json from database every 90 seconds and syncs player data on join/leave";
+    return "Pushes ServerSettings.json from database on startup and syncs player data on join/leave; ServerSettings sync every 90 seconds only when player count is 50 or more";
   }
 
   static get defaultEnabled() {
@@ -130,7 +120,7 @@ export default class OfficialKothDB extends BasePlugin {
     }
   }
 
-  async syncKothFiles() {
+  async syncServerSettings() {
     try {
       const serverSettings = await this.models.PlayerData.findOne({
         where: { player_id: 'ServerSettings' }
@@ -143,8 +133,20 @@ export default class OfficialKothDB extends BasePlugin {
       } else {
         this.verbose(1, 'OfficialKothDB: No ServerSettings record found in database, skipping push');
       }
+    } catch (err) {
+      this.verbose(1, `OfficialKothDB: Error syncing ServerSettings: ${err.message}`);
+    }
+  }
 
+  async syncKothFiles() {
+    try {
       const connectedSteamIDs = await this.readPlayerList();
+      if (connectedSteamIDs.length >= 50 && this.options.syncEnabled) {
+        await this.syncServerSettings();
+      } else {
+        this.verbose(1, `OfficialKothDB: Player count (${connectedSteamIDs.length}) below 50 or sync disabled, skipping ServerSettings sync`);
+      }
+
       if (connectedSteamIDs.length === 0) {
         this.verbose(1, 'OfficialKothDB: No connected players found in PlayerList.json');
       }
@@ -210,6 +212,7 @@ export default class OfficialKothDB extends BasePlugin {
       this.verbose(1, `OfficialKothDB: PlayerList.json not found at "${playerListPath}". Plugin will not sync player data.`);
     }
 
+    await this.syncServerSettings(); // Pull ServerSettings on startup
     await this.syncKothFiles();
 
     if (this.options.syncEnabled) {
